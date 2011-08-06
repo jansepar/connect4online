@@ -6,11 +6,14 @@ class SetFacebookAccessToken(object):
 		if (settings.YOUR_APP_ID and settings.YOUR_APP_SECRET):
 			try:
 				access_key = request.COOKIES['fbs_' + settings.YOUR_APP_ID]
-				request["access_key"] = access_key
+				request.facebook = access_key
+				print "Key found!"
 			except:
-				request["access_key"] = None
+				request.facebook = None
+				print "No access key in cookie"
 
 			return None
 				
 		else:
 			raise Exception
+			print "Facebook settings not set"

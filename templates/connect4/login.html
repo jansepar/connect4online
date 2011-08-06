@@ -1,0 +1,37 @@
+<html>
+<head>
+<title>Connect 4 Online</title>
+</head>
+<body>
+<div id="fb-root"></div>
+<script src="http://connect.facebook.net/en_US/all.js">
+</script>
+<script>
+FB.init({ 
+appId:'177073212363384', cookie:true, 
+status:true, xfbml:true 
+});
+
+FB.api('/me', function(user) {
+		if(user != null) {
+			// sets the login button to invisible after a login
+			var facebook_button = document.getElementById("facebook_button");
+			facebook_button.style.display = "none";
+
+			// sets the users profile image
+			var image = document.getElementById('profile');
+			image.src = 'https://graph.facebook.com/' + user.id + '/picture';
+
+			// welcomes the user
+			var welcome = document.getElementById('welcome');
+			welcome.innerHTML = "Thanks for registering for Connect 4 Online " + user.name + "!\n Redirecting...";
+		}
+		});
+</script>
+<fb:login-button perms="email,user_checkins" id="facebook_button">
+Login with Facebook
+</fb:login-button>
+<img src="" id="profile"></image>
+<div id="welcome"></div>
+</body>
+</html>
