@@ -52,7 +52,6 @@ USE_L10N = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
-MEDIA_ROOT = ''
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
@@ -111,7 +110,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'connect4online.urls'
 
-MEDA_ROOT = '/Users/shawnjan/Projects/connect4online/media/'
+MEDIA_ROOT = '/Users/shawnjan/Projects/connect4online/media/'
 
 TEMPLATE_DIRS = (
 	os.path.join(PROJECT_ROOT, "templates"),

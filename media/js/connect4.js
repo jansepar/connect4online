@@ -17,7 +17,8 @@ var intervalId;
 var cell_colors = ["WHITE", "RED", "BLACK"]
 
 var TURN = 1; // Player 1 or 2
-var GAME_STATE = "RUN";
+var PLAYER;
+var GAME_STATE;
 
 var context;
 
@@ -90,8 +91,10 @@ function draw() {
 	// clears the canvas on each loop
 	clear();
 
-	// draw the held puck
-	drawHeld();
+	// draw the held puck if the game has started
+	if (GAME_STATE==="RUNNING") {
+		drawHeld();
+	}
 
 	// draw the game board
 	drawGameBoard();
@@ -256,6 +259,12 @@ function Puck(player) {
 }
 
 function init() {
+
+	// set game state to waiting
+	GAME_STATE = "WAITING";
+
+	// set status div to inform user of game state
+	document.getElementById("status").innerHTML = "Creating game...";
 
 	//get a reference to the context
 	canvas = document.getElementById("canvas")
