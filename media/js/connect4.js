@@ -18,7 +18,7 @@ var cell_colors = ["WHITE", "RED", "BLACK"]
 
 var TURN = 1; // Player 1 or 2
 var PLAYER;
-var GAME_STATE;
+var GAME_STATE; // STARTING, WAITING, RUNNING
 
 var context;
 
@@ -92,7 +92,7 @@ function draw() {
 	clear();
 
 	// draw the held puck if the game has started
-	if (GAME_STATE==="RUNNING") {
+	if (GAME_STATE==="WAITING") {
 		drawHeld();
 	}
 
@@ -202,7 +202,7 @@ function checkWin(row, col){
 
 function dropPuck() {
 
-	if (GAME_STATE == "RUN"){
+	if (GAME_STATE == "RUNNING"){
 
 		GAME_STATE = "WAITING";
 
@@ -229,7 +229,7 @@ function dropPuck() {
 				TURN = 1;
 			}
 
-			GAME_STATE = "RUN";
+			GAME_STATE = "RUNNING";
 		}
 
 
@@ -258,10 +258,58 @@ function Puck(player) {
 	this.player = player; // 0 = none, 1 = p1, 2 = p2
 }
 
+function init_game() {
+// creates request to initialize game
+	$.get("/initialize_game/",
+		function(data) {
+			document.getElementById("status").innerHTML = "Waiting for other players...";
+			document.getElementById("info").innerHTML = "Game id: " + data.game_id;
+			if (data.gameStatus === "open") {
+				GAME_STATE = "WAITING";
+				get_challenger();
+			} else if (data.gameStatus === "closed"){
+				get_turn();
+			}
+			PLAYER = data.player;
+		}, "json");
+
+}
+
+function get_challenger() {
+// checks if the gamesession has another player to play with yet
+
+	var intervalId = setInterval(function()
+	{
+		$.ajax(
+		{
+			type: 'POST',
+			url: "/get_challenger/",
+			data: {gameid: "1"},
+			success: function(data) {
+				if (data.gameStatus == "closed") {
+					clearInterval(intervalId);
+					GAME_STATE = "RUNNING";
+				}
+
+			},
+			contentType: 'application/json'
+
+		})
+
+	}, 1000);
+
+}
+
+function get_turn() {
+// polls to check if turn on server matches player in game instance
+
+
+}
+
 function init() {
 
 	// set game state to waiting
-	GAME_STATE = "WAITING";
+	GAME_STATE = "STARTING";
 
 	// set status div to inform user of game state
 	document.getElementById("status").innerHTML = "Creating game...";
@@ -282,6 +330,8 @@ function init() {
 
 	// set the onclick handler of the canvas to our mouse click handler function
 	canvas.onclick = dropPuck;
+
+	init_game();
 
 	intervalId = setInterval(draw, 10);
 

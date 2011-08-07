@@ -10,6 +10,8 @@ urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'connect4online.views.home', name='home'),
     url(r'^$', home_login),
+    url(r'^initialize_game/$', initialize_game),
+
 	url(r'^media/(?P<path>.*)$', 'django.views.static.serve', {
 		'document_root': settings.MEDIA_ROOT,
 		}),

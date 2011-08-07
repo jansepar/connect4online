@@ -10,10 +10,55 @@ import urllib, json
 
 # Create your views here.
 
+def initialize_game(request):
+	'''
+	Creates a game session on request from /initialize_game/
+	If there are no open games, create new game
+	If there are open games, join player to that game
+	'''
+	response_dict = {}
+	if request.user.is_authenticated():
+
+		# get the facebook user associated with this user
+		fb_user = request.user.fb_set.all()[0]
+
+		# grab all open games
+		open_games = GameSession.objects.filter(status="open")
+
+		# check if open session with this player already exists (user likely refreshed)
+		if open_games[0].player1 == fb_user:
+			game = open_games[0]
+			player = 1
+		else:
+			player = None
+			if len(open_games) == 0:
+				# There are no games open, must create one
+				game = GameSession.objects.create(player1=fb_user, gameData="", status="open")
+				player = 1
+			else:
+				# TODO: Must deal with mutual exclusion here. This could result in issues
+				game = open_games[0]
+				game.player2 = fb_user
+				game.status = "closed"
+				game.save()
+				player = 2
+				response_dict.update( {'opp_name': request.user.first_name}  );
+
+
+		response_dict.update({'success': True, 'game_id': game.id, 'player': player, 'gameStatus': game.status }) 
+	else:
+		response_dict.update({'success': False, 'error': 'Not authenticated'})
+
+	return HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
+
+
 def home_login(request, template_name="connect4/login.html"):
+	'''
+	Authenticates the user with Facebook, creates accounts
+	or loads accounts and authorizes them and creates sessionid
+	'''
 
 	if (request.user.is_authenticated()):
-		print "hurray!"
 		template_name = "connect4/index.html"
 
 	elif request.facebook:
