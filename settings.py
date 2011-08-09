@@ -27,6 +27,9 @@ DATABASES = {
 YOUR_APP_ID =     '177073212363384'
 YOUR_APP_SECRET = 'a4a97ec39967ab685402ea49571f476f' 
 
+NUM_ROWS = 6
+NUM_COLS = 7
+
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.

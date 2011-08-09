@@ -16,9 +16,10 @@ var intervalId;
 
 var cell_colors = ["WHITE", "RED", "BLACK"]
 
-var TURN = 1; // Player 1 or 2
+var TURN; // Player 1 or 2
 var PLAYER;
 var GAME_STATE; // STARTING, WAITING, RUNNING
+var GAME_ID;
 
 var context;
 
@@ -57,7 +58,6 @@ function drawGameBoard() {
 		context.lineTo(canvas_width, y);
 	}
 
-	context.strokeStyle = "#eee";
 	context.stroke();
 
 	start_x = cell_size + cell_size/2;
@@ -87,18 +87,6 @@ function clear() {
 	context.clearRect(0, 0, canvas_width, canvas_height);
 }
 
-function draw() {
-	// clears the canvas on each loop
-	clear();
-
-	// draw the held puck if the game has started
-	if (GAME_STATE==="WAITING") {
-		drawHeld();
-	}
-
-	// draw the game board
-	drawGameBoard();
-}
 
 function checkWin(row, col){
 
@@ -200,6 +188,17 @@ function checkWin(row, col){
 	return false;
 }
 
+function setBoardData(drop_column, playerId) {
+// sets the data for the column
+
+		drop_row = num_rows - num_dropped[drop_column] - 1
+
+		// modify global variables
+		puck_cells[drop_row][drop_column].player = playerId;
+		num_dropped[drop_column] += 1;
+
+}
+
 function dropPuck() {
 
 	if (GAME_STATE == "RUNNING"){
@@ -208,9 +207,7 @@ function dropPuck() {
 
 		// determine the column to drop the puck
 		drop_column = Math.ceil(held_x/cell_size) - 1;
-		drop_row = num_rows - num_dropped[drop_column] - 1
-		puck_cells[drop_row][drop_column].player = TURN;
-		num_dropped[drop_column] += 1;
+		setBoardData(drop_column, PLAYER);
 
 		// check to see if there is a winner
 		win_check = checkWin(drop_row, drop_column);
@@ -221,15 +218,17 @@ function dropPuck() {
 			GAME_STATE = "FINISHED";
 		}
 		else{
+			send_move(drop_column);
 
 			// Switch turns 
+			/* Not needed for multiplayer
 			if (TURN == 1) {
 				TURN = 2;
 			}else {
 				TURN = 1;
 			}
+			*/
 
-			GAME_STATE = "RUNNING";
 		}
 
 
@@ -260,18 +259,27 @@ function Puck(player) {
 
 function init_game() {
 // creates request to initialize game
-	$.get("/initialize_game/",
-		function(data) {
+	$.ajax(
+	{
+		type: 'GET',
+		url: "/initialize_game/",
+		dataType: 'json',
+		success: function(data) {
 			document.getElementById("status").innerHTML = "Waiting for other players...";
 			document.getElementById("info").innerHTML = "Game id: " + data.game_id;
+			GAME_ID = data.game_id;
+			TURN = data.player;
+			GAME_STATE = "WAITING";
 			if (data.gameStatus === "open") {
-				GAME_STATE = "WAITING";
 				get_challenger();
 			} else if (data.gameStatus === "closed"){
+				document.getElementById("status").innerHTML = "Challenger " + data.opponent + " found!";
 				get_turn();
 			}
 			PLAYER = data.player;
-		}, "json");
+		}, 
+		
+	});
 
 }
 
@@ -282,17 +290,17 @@ function get_challenger() {
 	{
 		$.ajax(
 		{
-			type: 'POST',
 			url: "/get_challenger/",
-			data: {gameid: "1"},
+			data: {gameid: GAME_ID},
+			dataType: 'json',
 			success: function(data) {
-				if (data.gameStatus == "closed") {
-					clearInterval(intervalId);
+				if (data.gameStatus === "COMPLETE") {
 					GAME_STATE = "RUNNING";
+					document.getElementById("status").innerHTML = "Challenger " + data.opponent + " found!";
+					clearInterval(intervalId);
 				}
 
 			},
-			contentType: 'application/json'
 
 		})
 
@@ -301,7 +309,66 @@ function get_challenger() {
 }
 
 function get_turn() {
-// polls to check if turn on server matches player in game instance
+// polls to check if it is the players turn to go 
+
+	var intervalid = setInterval(function()
+	{
+		$.ajax(
+		{
+			url: "/get_turn/",
+			data: {gameid: GAME_ID},
+			dataType: 'json',
+			success: function(data) {
+				console.log(data.turn);
+				if (data.turn === PLAYER) {
+					var opponent;
+					if (PLAYER === 1){
+						opponent = 2;
+					}else{
+						opponent = 1;
+					}
+					setBoardData(data.previous, opponent); 
+					GAME_STATE = "RUNNING";
+					clearInterval(intervalid);
+					// TODO: Get previous col	
+				}
+
+			},
+
+		})
+
+	}, 1000);
+
+}
+
+function send_move(column) {
+
+
+	GAME_STATE = "WAITING";
+	document.getElementById("status").innerHTML = "Make a move";
+
+	$.ajax(
+	{
+		type: 'GET',
+		url: "/send_move/",
+		data: {"column": column, "gameid": GAME_ID},
+		dataType: 'json',
+		success: function(data) {
+			if(data.success === true) {
+				document.getElementById("status").innerHTML = "Action sent. Waiting for turn...";
+				document.getElementById("error").innerHTML = "";
+				//clearInterval(intervalId);
+				get_turn();
+			}
+			else {
+				// Must still check for valid column sent incase of hacking
+				document.getElementById("error").innerHTML = "The move you made was invalid";
+				send_move(column);
+				GAME_STATE = "RUNNING"
+			}
+		}, 
+		
+	});
 
 
 }
@@ -310,6 +377,7 @@ function init() {
 
 	// set game state to waiting
 	GAME_STATE = "STARTING";
+
 
 	// set status div to inform user of game state
 	document.getElementById("status").innerHTML = "Creating game...";
@@ -320,6 +388,9 @@ function init() {
 
 	// initial position of held puck
 	held_x = 35;
+
+	// set stroke style for boundary lines in game board
+	context.strokeStyle = "#eee";
 
 	// set bounds for canvas
 	canvasMinX = $("#canvas").offset().left;
@@ -333,9 +404,21 @@ function init() {
 
 	init_game();
 
-	intervalId = setInterval(draw, 10);
+	var draw = function() {  // experimenting with closures TODO fix up for better use of them
+		// clears the canvas on each loop
+		clear();
 
-	// set the interval to draw every 10 milliseconds
+		// draw the held puck if the game has started
+		if (GAME_STATE != "STARTING") {
+			drawHeld();
+		}
+
+		// draw the game board
+		drawGameBoard();
+	}
+
+	intervalId = setInterval(draw, 34); //draw at ~30fps instead of every 10 ms, big performance boost
+
 	return intervalId;
 
 }

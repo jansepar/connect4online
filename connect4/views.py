@@ -7,7 +7,7 @@ from django.conf import settings
 
 from connect4online.connect4.models import *
 
-import urllib, json
+import urllib, json, traceback
 
 # Create your views here.
 
@@ -26,31 +26,47 @@ def send_move(request):
 			gameid = int(request.GET.get('gameid'))
 			try:
 				game = GameSession.objects.get(id=gameid)
-				print column, gameid
 
 				if game.player1 == fb_user or game.player2 == fb_user:
-					# print "column: " + column + " NUM_COLS: " + int(settings.NUM_COLS)
-					if column < settings.NUM_COLS and column >= 0:
-						print "B"
-						# set the previous field to the recent column
-						game.previous = column
+					# check if the turn matches the player sending the data
+					if (game.turn == 1 and game.player1 == fb_user) or (game.turn == 2 and game.player2 == fb_user):
+						# print "column: " + column + " NUM_COLS: " + int(settings.NUM_COLS)
+						if column < settings.NUM_COLS and column >= 0:
+							# set the previous field to the recent column
+							game.previous = column
 
-						# load the game board and update appropriately
-						game_data = json.loads(game.gameData) #TODO: fix potential problem with unicode
-						game_board = game_data[u'game_board']
-						columns = game_data[u'columns']
-						player = -1
+							# load the game board and update appropriately
+							#game_data = json.loads(game.gameData) #TODO: fix potential problem with unicode
+							#game_board = game_data[u'game_board']
+							#columns = game_data[u'columns']
 
-						if game.player1 == fb_user:
-							player = 1
-						else:
-							player = 2
+							if game.player1 == fb_user:
+								player = 1
+								turn = 2
+							else:
+								player = 2
+								turn = 1
+
+							#row_effected = settings.NUM_ROWS - 1 - columns[column]
+							#columns[column] += 1
+							#game_board[unicode(str(row_effected))][column] = player
+
+							#game_data = {"game_board": game_board, "columns": columns}
+							
+							#game.gameData = game_data
+							game.turn = turn
+							game.save()
+							response_dict.update({'success': True})
+
+
+
 
 				else:
 					response_dict.update({'success': False, 
 											'error': "This game session does not belong to the user associated",
 										})
 			except Exception, e:
+				traceback.print_exc()
 				print e
 				response_dict.update({'success': False, 
 										'error': "No game session of id %s exists" %gameid,
@@ -62,14 +78,40 @@ def send_move(request):
 									'error': "No game id and/or column passed to request",
 								})
 
-	print response_dict
 	return HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
 
 def get_turn(request):
 	'''
 	Gets the turn, as well as previous move made.
 	'''
-	pass
+	response_dict = {}
+	if request.user.is_authenticated():
+		# get the facebook user associated with this user
+		fb_user = request.user.fb_set.all()[0]
+
+		if request.GET.__contains__('gameid'):
+			gameid = int(request.GET.get('gameid'))
+			try:
+				game = GameSession.objects.get(id=gameid)
+				response_dict.update({'success': True,
+										'turn': game.turn,
+										'previous': game.previous,
+									})
+			except Exception, e:
+				print e
+				response_dict.update({'success': False, 
+										'error': "No game session of id %s exists" %gameid,
+									})
+		else:
+			response_dict.update({'success': False, 
+									'error': "No game id passed to request",
+								})
+
+	else:
+		response_dict.update({'success': False, 
+								'error': "No game id and/or column passed to request",
+							})
+	return HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
 
 def get_challenger(request):
 	'''

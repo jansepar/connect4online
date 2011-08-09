@@ -13,7 +13,7 @@ status:true, xfbml:true
 });
 
 FB.api('/me', function(user) {
-		if(user != null) {
+		if(user != null && user.name != undefined) {
 			// sets the login button to invisible after a login
 			var facebook_button = document.getElementById("facebook_button");
 			//facebook_button.style.display = "none";
@@ -33,5 +33,7 @@ Login with Facebook
 </fb:login-button>
 <img src="" id="profile"></image>
 <div id="welcome"></div>
+<div id="status"></div>
+<div id="error"></div>
 </body>
 </html>

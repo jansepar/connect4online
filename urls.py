@@ -10,7 +10,11 @@ urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'connect4online.views.home', name='home'),
     url(r'^$', home_login),
+	# TODO: Make these URLs more RESTful
     url(r'^initialize_game/$', initialize_game),
+    url(r'^get_challenger/$', get_challenger),
+    url(r'^send_move/$', send_move),
+    url(r'^get_turn/$', get_turn),
 
 	url(r'^media/(?P<path>.*)$', 'django.views.static.serve', {
 		'document_root': settings.MEDIA_ROOT,
