@@ -3,12 +3,118 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
+from django.conf import settings
 
 from connect4online.connect4.models import *
 
 import urllib, json
 
 # Create your views here.
+
+def send_move(request):
+	'''
+	Recieves the move sent by the player.
+	'''
+
+	response_dict = {}
+	if request.user.is_authenticated():
+		# get the facebook user associated with this user
+		fb_user = request.user.fb_set.all()[0]
+
+		if request.GET.__contains__('column') and request.GET.__contains__('gameid'):
+			column = int(request.GET.get('column'))
+			gameid = int(request.GET.get('gameid'))
+			try:
+				game = GameSession.objects.get(id=gameid)
+				print column, gameid
+
+				if game.player1 == fb_user or game.player2 == fb_user:
+					# print "column: " + column + " NUM_COLS: " + int(settings.NUM_COLS)
+					if column < settings.NUM_COLS and column >= 0:
+						print "B"
+						# set the previous field to the recent column
+						game.previous = column
+
+						# load the game board and update appropriately
+						game_data = json.loads(game.gameData) #TODO: fix potential problem with unicode
+						game_board = game_data[u'game_board']
+						columns = game_data[u'columns']
+						player = -1
+
+						if game.player1 == fb_user:
+							player = 1
+						else:
+							player = 2
+
+				else:
+					response_dict.update({'success': False, 
+											'error': "This game session does not belong to the user associated",
+										})
+			except Exception, e:
+				print e
+				response_dict.update({'success': False, 
+										'error': "No game session of id %s exists" %gameid,
+									})
+				
+		
+		else:
+			response_dict.update({'success': False, 
+									'error': "No game id and/or column passed to request",
+								})
+
+	print response_dict
+	return HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
+
+def get_turn(request):
+	'''
+	Gets the turn, as well as previous move made.
+	'''
+	pass
+
+def get_challenger(request):
+	'''
+	Checks to see if a challenger has joined a game session. Call invoked when waiting for opponent
+	'''
+	response_dict = {}
+	if request.user.is_authenticated():
+		# get the facebook user associated with this user
+		fb_user = request.user.fb_set.all()[0]
+
+		if request.GET.__contains__('gameid'):
+			gameid = request.GET.get('gameid')
+			try:
+				game = GameSession.objects.get(id=gameid)
+
+				if game.player1 == fb_user:
+					# Check if the game has an opponent
+					if (game.player2 is not None) and (game.status == "closed"):
+						response_dict.update({'success': True,
+												'gameStatus': "COMPLETE",
+												'opponent': game.player2.user.first_name,
+											})
+					else:
+						response_dict.update({'success': True,
+												'gameStatus': "PENDING",
+											})
+						
+						
+				else:
+					response_dict.update({'success': False, 
+											'error': "This game session does not belong to this user"
+										})
+					
+			except Exception, e:
+				response_dict.update({'success': False, 
+										'error': "Game session with that id does not exist"
+									})
+				
+
+		else:
+			response_dict.update({'success': False, 
+									'error': "No game id passed to request"
+								})
+
+	return HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
 
 def initialize_game(request):
 	'''
@@ -26,14 +132,25 @@ def initialize_game(request):
 		open_games = GameSession.objects.filter(status="open")
 
 		# check if open session with this player already exists (user likely refreshed)
-		if open_games[0].player1 == fb_user:
+		if len(open_games) > 0 and open_games[0].player1 == fb_user:
 			game = open_games[0]
 			player = 1
 		else:
 			player = None
 			if len(open_games) == 0:
+
+				# create json formated 2d array representing game board
+				# using dictionary of lists
+				game_board = {}
+				for row in range(0, settings.NUM_ROWS):
+					game_board[row] = [0 for i in range(settings.NUM_COLS)]
+
+				columns = [0 for i in range(settings.NUM_COLS)]
+
+				game_data = {"game_board": game_board, "columns": columns}
+
 				# There are no games open, must create one
-				game = GameSession.objects.create(player1=fb_user, gameData="", status="open")
+				game = GameSession.objects.create(player1=fb_user, gameData=json.dumps(game_data), status="open")
 				player = 1
 			else:
 				# TODO: Must deal with mutual exclusion here. This could result in issues
@@ -42,14 +159,20 @@ def initialize_game(request):
 				game.status = "closed"
 				game.save()
 				player = 2
-				response_dict.update( {'opp_name': request.user.first_name}  );
+				response_dict.update( {'opponent': game.player1.user.first_name}  );
 
 
-		response_dict.update({'success': True, 'game_id': game.id, 'player': player, 'gameStatus': game.status }) 
+		response_dict.update({'success': True, 
+								'game_id': game.id, 
+								'player': player, 
+								'gameStatus': game.status }) 
 	else:
-		response_dict.update({'success': False, 'error': 'Not authenticated'})
+		response_dict.update({'success': False, 
+								'error': 'Not authenticated'})
 
 	return HttpResponse(json.dumps(response_dict), mimetype='application/javascript')
+
+
 
 
 def home_login(request, template_name="connect4/login.html"):
