@@ -216,9 +216,10 @@ function dropPuck() {
 			// TODO: execute some ajax call to register the win
 			document.getElementById("status").innerHTML = "Player " + TURN + " wins!";
 			GAME_STATE = "FINISHED";
+			document.getElementById("error").innerHTML = "Player " + TURN + " wins!";
+			
 		}
-		else{
-			send_move(drop_column);
+		send_move(drop_column);
 
 			// Switch turns 
 			/* Not needed for multiplayer
@@ -229,7 +230,6 @@ function dropPuck() {
 			}
 			*/
 
-		}
 
 
 	}
@@ -329,6 +329,7 @@ function get_turn() {
 					}
 					setBoardData(data.previous, opponent); 
 					GAME_STATE = "RUNNING";
+					document.getElementById("status").innerHTML = "Make a move";
 					clearInterval(intervalid);
 					// TODO: Get previous col	
 				}
@@ -342,6 +343,7 @@ function get_turn() {
 }
 
 function send_move(column) {
+
 
 
 	GAME_STATE = "WAITING";
