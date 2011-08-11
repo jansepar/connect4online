@@ -188,16 +188,6 @@ function checkWin(row, col){
 	return false;
 }
 
-function setBoardData(drop_column, playerId) {
-// sets the data for the column
-
-		drop_row = num_rows - num_dropped[drop_column] - 1
-
-		// modify global variables
-		puck_cells[drop_row][drop_column].player = playerId;
-		num_dropped[drop_column] += 1;
-
-}
 
 function dropPuck() {
 
@@ -207,32 +197,22 @@ function dropPuck() {
 
 		// determine the column to drop the puck
 		drop_column = Math.ceil(held_x/cell_size) - 1;
-		setBoardData(drop_column, PLAYER);
+		drop_row = num_rows - num_dropped[drop_column] - 1
+		setBoardData(drop_row, drop_column, PLAYER);
 
-		// check to see if there is a winner
-		win_check = checkWin(drop_row, drop_column);
-
-		if (win_check == true){
-			// TODO: execute some ajax call to register the win
-			document.getElementById("status").innerHTML = "Player " + TURN + " wins!";
-			GAME_STATE = "FINISHED";
-			document.getElementById("error").innerHTML = "Player " + TURN + " wins!";
-			
-		}
 		send_move(drop_column);
 
-			// Switch turns 
-			/* Not needed for multiplayer
-			if (TURN == 1) {
-				TURN = 2;
-			}else {
-				TURN = 1;
-			}
-			*/
-
-
-
 	}
+
+}
+
+function setBoardData(row, column, playerId) {
+// sets the data for the column
+
+
+		// modify global variables
+		puck_cells[row][column].player = playerId;
+		num_dropped[column] += 1;
 
 }
 
@@ -327,7 +307,8 @@ function get_turn() {
 					}else{
 						opponent = 1;
 					}
-					setBoardData(data.previous, opponent); 
+					drop_row = num_rows - num_dropped[data.previous] - 1
+					setBoardData(drop_row, data.previous, opponent); 
 					GAME_STATE = "RUNNING";
 					document.getElementById("status").innerHTML = "Make a move";
 					clearInterval(intervalid);
@@ -347,7 +328,6 @@ function send_move(column) {
 
 
 	GAME_STATE = "WAITING";
-	document.getElementById("status").innerHTML = "Make a move";
 
 	$.ajax(
 	{
@@ -357,10 +337,22 @@ function send_move(column) {
 		dataType: 'json',
 		success: function(data) {
 			if(data.success === true) {
-				document.getElementById("status").innerHTML = "Action sent. Waiting for turn...";
-				document.getElementById("error").innerHTML = "";
-				//clearInterval(intervalId);
-				get_turn();
+				// check to see if there is a winner
+				var drop_row = num_rows - num_dropped[drop_column] - 1
+				win_check = checkWin(drop_row, column);
+
+				if (win_check == true){
+					// TODO: execute some ajax call to register the win
+					document.getElementById("status").innerHTML = "Player " + TURN + " wins!";
+					GAME_STATE = "FINISHED";
+					
+				}
+				else{
+					document.getElementById("status").innerHTML = "Action sent. Waiting for turn...";
+					document.getElementById("error").innerHTML = "";
+					//clearInterval(intervalId);
+					get_turn();
+				}
 			}
 			else {
 				// Must still check for valid column sent incase of hacking

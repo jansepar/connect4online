@@ -1,6 +1,12 @@
 <html>
 <head>
 <title>Connect 4 Online</title>
+<script>
+window.onload = function() {
+	var image = document.getElementById("profile");
+	image.style.display = "none";
+}
+</script>
 </head>
 <body>
 <div id="fb-root"></div>
@@ -16,7 +22,7 @@ FB.api('/me', function(user) {
 		if(user != null && user.name != undefined) {
 			// sets the login button to invisible after a login
 			var facebook_button = document.getElementById("facebook_button");
-			//facebook_button.style.display = "none";
+			facebook_button.style.display = "none";
 
 			// sets the users profile image
 			var image = document.getElementById('profile');
@@ -24,7 +30,8 @@ FB.api('/me', function(user) {
 
 			// welcomes the user
 			var welcome = document.getElementById('welcome');
-			welcome.innerHTML = "Thanks for registering for Connect 4 Online " + user.name + "!\n Redirecting...";
+			welcome.innerHTML = "Thanks for registering for Connect 4 Online " + user.name + "!\n Refreshing...";
+			// TODO: Refresh website
 		}
 		});
 </script>
