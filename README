@@ -1,0 +1,6 @@
+
+This is a online Connect4 written with a HTML5 Javascript frontend, and a Django backend.
+
+Current project status:
+- Code is very messy; goal was to learn javascript and finish this in a week and I succeeded (without win detection) but the code at the end turned out messy. Revising frontend code a must.
+
